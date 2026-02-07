@@ -163,5 +163,5 @@ function renderPolygons(features) {
     }
 }
 
-// Initial load attempt (will fail without key)
-// loadData(); 
+// Initial load attempt
+loadData(); 
