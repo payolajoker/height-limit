@@ -31,7 +31,6 @@ function clearPolygons() {
 async function loadData() {
     if (VWORLD_API_KEY === "YOUR_VWORLD_API_KEY") {
         document.getElementById('status').innerText = "Error: Missing V-World API Key";
-        console.error("Please set VWORLD_API_KEY in script.js");
         return;
     }
 
@@ -39,13 +38,11 @@ async function loadData() {
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
 
-    // Construct BBOX (minx, miny, maxx, maxy) in EPSG:4326 order
-    // V-World WFS 1.1.0 and 2.0.0 might swap axis depending on version and SRS.
-    // EPSG:4326 usually is Lat,Lon order but in WFS 1.1 with URN it's often confusing.
-    // Let's try standard Lon,Lat order first as most specific APIs accept. Or check docs.
-    // V-World bbox is typically minX, minY, maxX, maxY (Lon, Lat).
     // V-World WFS 1.1.0 requires Lat,Lon (Y,X) order for EPSG:4326
     const bbox = `${sw.getLat()},${sw.getLng()},${ne.getLat()},${ne.getLng()},EPSG:4326`;
+
+    // JSONP Callback Name
+    const callbackName = 'vworldJsonpCallback';
 
     const params = new URLSearchParams({
         SERVICE: "WFS",
@@ -55,36 +52,41 @@ async function loadData() {
         VERSION: "1.1.0",
         MAXFEATURES: "100",
         SRSNAME: "EPSG:4326",
-        OUTPUT: "application/json",
+        OUTPUT: "text/javascript", // JSONP output format for V-World
+        FORMAT_OPTIONS: `callback:${callbackName}`, // Some WFS use this
         KEY: VWORLD_API_KEY,
         DOMAIN: VWORLD_DOMAIN
     });
 
-    const url = `${WFS_URL}?${params.toString()}`;
-    console.log("Fetching:", url);
+    // Fallback for some V-World versions: generic 'callback' param
+    let url = `${WFS_URL}?${params.toString()}&callback=${callbackName}`;
+
+    console.log("Fetching (JSONP):", url);
     document.getElementById('status').innerText = "Loading data...";
 
-    try {
-        // Use a proxy or CORS workaround if needed.
-        // V-World supports CORS if domain matches the key's registered domain.
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const geoJson = await response.json();
-        console.log("Data received:", geoJson);
-
+    // Define global callback function
+    window[callbackName] = function (geoJson) {
+        console.log("Data received (JSONP):", geoJson);
         if (geoJson.features && geoJson.features.length > 0) {
-            console.log("Feature Example:", geoJson.features[0]);
             renderPolygons(geoJson.features);
             document.getElementById('status').innerText = `Loaded ${geoJson.features.length} zones`;
         } else {
             document.getElementById('status').innerText = "No data found";
         }
+        // Cleanup
+        delete window[callbackName];
+        document.body.removeChild(document.getElementById('vworld-jsonp-script'));
+    };
 
-    } catch (e) {
-        console.error("Fetch error:", e);
-        document.getElementById('status').innerText = "Error loading data (Check console)";
-    }
+    // Create Script Tag
+    const script = document.createElement('script');
+    script.id = 'vworld-jsonp-script';
+    script.src = url;
+    script.onerror = function () {
+        document.getElementById('status').innerText = "Error loading data (JSONP Fail)";
+        console.error("JSONP Script Load Error");
+    };
+    document.body.appendChild(script);
 }
 
 function renderPolygons(features) {
