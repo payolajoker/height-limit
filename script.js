@@ -12,7 +12,7 @@ const VWORLD_API_KEY = "9036E358-E38F-3C6F-9537-B03786AA1172"; // User provided 
 const VWORLD_DOMAIN = "payolajoker.github.io"; // Must match registered domain for the key
 
 const WFS_URL = "https://api.vworld.kr/req/wfs";
-const LAYER_NAME = "lt_c_ais_flight_safety_zone"; // Height Restriction Zone (Flight Safety Zone)
+const LAYER_NAME = "lt_c_aisprhc"; // Prohibited Area (Testing replacement due to missing Flight Safety Zone)
 
 document.getElementById('toggle-zones').addEventListener('change', (e) => {
     if (e.target.checked) {
@@ -92,19 +92,10 @@ function renderPolygons(features) {
     features.forEach(feature => {
         const props = feature.properties;
         // Try to identify zone number from properties
-        let zoneColor = '#666666'; // Default gray
-        let zoneName = 'Unknown Zone';
-
-        // Naive detection of Zone Number (1-6) from any string property
-        // Common props: 'zone_nm', 'lbl', 'sec_nm'
-        const propValues = Object.values(props).join(" ");
-
-        if (propValues.includes("1구역") || propValues.includes("제1구역")) { zoneColor = '#FF0000'; zoneName = "제1구역"; }
-        else if (propValues.includes("2구역") || propValues.includes("제2구역")) { zoneColor = '#FF7F00'; zoneName = "제2구역"; }
-        else if (propValues.includes("3구역") || propValues.includes("제3구역")) { zoneColor = '#FFFF00'; zoneName = "제3구역"; }
-        else if (propValues.includes("4구역") || propValues.includes("제4구역")) { zoneColor = '#00FF00'; zoneName = "제4구역"; }
-        else if (propValues.includes("5구역") || propValues.includes("제5구역")) { zoneColor = '#0000FF'; zoneName = "제5구역"; }
-        else if (propValues.includes("6구역") || propValues.includes("제6구역")) { zoneColor = '#9400D3'; zoneName = "제6구역"; }
+        // Prohibited Area (lt_c_aisprhc) usually doesn't have "Zone 1-6".
+        // Just render everything in RED for now to verify it works.
+        zoneColor = '#FF0000';
+        zoneName = props.lbl || props.nam || "Prohibited Area";
 
         const geometry = feature.geometry;
         if (geometry.type === "Polygon") {
