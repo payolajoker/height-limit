@@ -44,7 +44,8 @@ async function loadData() {
     // EPSG:4326 usually is Lat,Lon order but in WFS 1.1 with URN it's often confusing.
     // Let's try standard Lon,Lat order first as most specific APIs accept. Or check docs.
     // V-World bbox is typically minX, minY, maxX, maxY (Lon, Lat).
-    const bbox = `${sw.getLng()},${sw.getLat()},${ne.getLng()},${ne.getLat()},EPSG:4326`;
+    // V-World WFS 1.1.0 requires Lat,Lon (Y,X) order for EPSG:4326
+    const bbox = `${sw.getLat()},${sw.getLng()},${ne.getLat()},${ne.getLng()},EPSG:4326`;
 
     const params = new URLSearchParams({
         SERVICE: "WFS",
